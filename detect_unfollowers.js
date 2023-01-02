@@ -5,12 +5,18 @@ var followersArray = [];
 const HEADER_ROW_INDEX = 0; // 0…1列目がヘッダー
 // データを挿入する左端にあたる列のindex
 const LEFT_END_COLUMN_INDEX = 1; // 1…B列からデータが入る
-// UserIDが入っている列のindex
+
+// userの画像を表示する列のindex
+const PROFILE_IMAGE_URL_COLUMN_INDEX = 1; // 1…B列に入っている
+// user.idが入っている列のindex
 const USER_ID_COLUMN_INDEX = 2; // 2…C列に入っている
-// Userの画像を表示する列のindex
+// usernameが入っている列のindex
+const USERNAME_COLUMN_INDEX = 4; // 4…E列に入っている
+// userの画像を表示する列のindex
 const PROFILE_IMAGE_COLUMN_INDEX = 0; // 0…A列に入っている
-// PROFILE_IMAGE_COLUMN_INDEXから見て、profile_image_urlがどこにあるか
-const PROFILE_IMAGE_URL_R1C1 = 'RC2'; // 右隣
+
+// PROFILE_IMAGE_COLUMN_INDEXから見て、profile_image_urlがどこにあるかをR1C1形式で表現した文字列
+const PROFILE_IMAGE_URL_R1C1 = 'RC[1]'; // 右隣
 
 // followers API のGETパラメータ
 const GET_PARAM_MAX_RESULTS = 'max_results=1000';
@@ -38,7 +44,7 @@ function main() {
     // データを書き込む
     latestSheet.getRange(HEADER_ROW_INDEX + 2, LEFT_END_COLUMN_INDEX, followersArray.length, LEFT_END_COLUMN_INDEX + USER_FIELDS_NUM).setValues(followersArray);
     // 画像が表示されるようにImageUrlの列を更新する
-    fillImageUrl(latestSheet);  
+    fillImageUrl(latestSheet, PROFILE_IMAGE_COLUMN_INDEX);  
   }
 
   let beforeSheet = spreadsheet.getSheetByName('before_followers');
@@ -49,18 +55,29 @@ function main() {
   
   // unfollowした人を探す
   let unfollows = [];
+  var currentTime  = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm');
+  // 配列のindexは、表のCLUMUN_INDEXから、LEFT_END_COLUMN_INDEXの分だけズレている
   let userIdIndex = USER_ID_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
+  let profileImageUrlIndex = PROFILE_IMAGE_URL_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
+  let usernameIndex = USERNAME_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
   for(let i = 0; i < beforeFollowers.length; i++){
     if(!latestIds.includes(beforeFollowers[i][userIdIndex])){
-      unfollows.push(beforeFollowers[i]);
+      let unfollowUser = [
+        currentTime,
+        null,
+        beforeFollowers[i][profileImageUrlIndex],
+        'https://twitter.com/' + beforeFollowers[i][usernameIndex]
+      ];
+      unfollows.push(unfollowUser);
     }
   }
 
   // unfollowした人を追記する
   if(unfollows.length > 0){
     diff_sheet = spreadsheet.getSheetByName('diff');
-    diff_sheet.getRange(diff_sheet.getLastRow() + 1, LEFT_END_COLUMN_INDEX + 1, unfollows.length, unfollows[0].length).setValues(unfollows);
-    fillImageUrl(diff_sheet);  
+    // truncateはせず、最後の行に追加する
+    diff_sheet.getRange(diff_sheet.getLastRow() + 1, 1, unfollows.length, unfollows[0].length).setValues(unfollows);
+    fillImageUrl(diff_sheet, 1);
   }
 }
 
@@ -121,6 +138,7 @@ function createFollowerData(headerRow){
     let responseCode = response.getResponseCode();
     if(responseCode !== 200){
       Logger.log('Error. Response = ' + response);
+      followersArray = [];
       break;
     }
 
@@ -133,8 +151,8 @@ function createFollowerData(headerRow){
   } while(nextToken !== undefined);
 }
 
-function fillImageUrl(sheet){
-  let range = sheet.getRange(HEADER_ROW_INDEX + 2, PROFILE_IMAGE_COLUMN_INDEX + 1, sheet.getLastRow() - 1, 1);
+function fillImageUrl(sheet, columnIndex){
+  let range = sheet.getRange(HEADER_ROW_INDEX + 2, columnIndex + 1, sheet.getLastRow() - 1, 1);
   let followerNum = range.getNumRows();
   let formulasR1C1 = [];
 
