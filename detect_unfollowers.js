@@ -49,7 +49,7 @@ function main() {
 
   let beforeSheet = spreadsheet.getSheetByName('before_followers');
   let beforeFollowers = beforeSheet.getRange(HEADER_ROW_INDEX + 2, LEFT_END_COLUMN_INDEX + 1, beforeSheet.getLastRow() - 1, beforeSheet.getLastColumn() - 1).getValues();
-  let latestIdValues = latestSheet.getRange(HEADER_ROW_INDEX + 2, USER_ID_COLUMN_INDEX + 1, beforeSheet.getLastRow() - 1, 1).getValues();
+  let latestIdValues = latestSheet.getRange(HEADER_ROW_INDEX + 2, USER_ID_COLUMN_INDEX + 1, latestSheet.getLastRow() - 1, 1).getValues();
   // 1次元配列に直す
   let latestIds = latestIdValues.reduce((pre,current) => {pre.push(...current);return pre},[]);
   
