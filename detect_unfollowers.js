@@ -59,14 +59,14 @@ function main() {
   let usernameIndex = USERNAME_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
   for(let i = 0; i < beforeFollowers.length; i++){
     if(!latestIds.includes(beforeFollowers[i][userIdIndex])){
-      let unfollowUsers = {
+      let unfollowUser = {
         time      : currentTime,
         image     : null,
         imageUrl  : beforeFollowers[i][profileImageUrlIndex],
         id        : beforeFollowers[i][userIdIndex],
         url       : 'https://twitter.com/' + beforeFollowers[i][usernameIndex]
       };
-      unfollowsJson.push(unfollowUsers);
+      unfollowUsers.push(unfollowUser);
     }
   }
 
