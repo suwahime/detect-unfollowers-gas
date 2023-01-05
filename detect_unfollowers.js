@@ -93,16 +93,6 @@ function truncateTable(sheet){
   contentRange.clearContent();
 }
 
-function pushFollowers(headerRow, jsonFollowers){
-  for (let row of jsonFollowers){
-    let rowArray = [];
-    for (let colName of headerRow){
-      rowArray.push(row[colName]);
-    }
-    followersArray.push(rowArray);
-  }
-}
-
 function createFollowerArray(headerRow){
   const scriptProps = PropertiesService.getScriptProperties();
   const url = 'https://api.twitter.com/2/users/' + scriptProps.getProperty('MY_TWITTER_ID') + '/followers';
