@@ -1,3 +1,7 @@
+
+
+// see https://zenn.dev/rikei_ocojo/articles/gas-twitter-non-public-metrics
+
 function getService() {
   pkceChallengeVerifier();
 
