@@ -1,6 +1,3 @@
-// 取得したフォロワーデータの格納配列
-var followersArray = [];
-
 // シートのヘッダーに当たる部分の行のindex。この次の行からデータを挿入する
 const HEADER_ROW_INDEX = 0; // 0…1列目がヘッダー
 // データを挿入する左端にあたる列のindex
@@ -33,7 +30,7 @@ function main() {
 
   // Twitter API を叩いてフォロワーリスト取得する
   let headerRow = latestSheet.getDataRange().getValues()[HEADER_ROW_INDEX];
-  createFollowerData(headerRow);
+  let followersArray = createFollowerArray(headerRow);
 
   // フォロワーリストをシートに保存する
   if(followersArray.length > 0){
@@ -106,7 +103,7 @@ function pushFollowers(headerRow, jsonFollowers){
   }
 }
 
-function createFollowerData(headerRow){
+function createFollowerArray(headerRow){
   const scriptProps = PropertiesService.getScriptProperties();
   const url = 'https://api.twitter.com/2/users/' + scriptProps.getProperty('MY_TWITTER_ID') + '/followers';
   const service = getService();
@@ -117,6 +114,7 @@ function createFollowerData(headerRow){
     return;
   }
 
+  let followersArray = [];
   let response, result, nextToken;
   do {
     let params = '?'+GET_PARAM_MAX_RESULTS+'&'+GET_PARAM_USER_FIELDS;
@@ -138,17 +136,25 @@ function createFollowerData(headerRow){
     let responseCode = response.getResponseCode();
     if(responseCode !== 200){
       Logger.log('Error. Response = ' + response);
-      followersArray = [];
-      break;
+      return [];
     }
 
-    pushFollowers(headerRow, result.data);
+    for (let row of result.data){
+      let rowArray = [];
+      for (let colName of headerRow){
+        rowArray.push(row[colName]);
+      }
+      followersArray.push(rowArray);
+    }
+
     if(DEBUG_API_AT_ONCE){
       break;
     }
     nextToken = result.meta.next_token;
 
   } while(nextToken !== undefined);
+
+  return followersArray;
 }
 
 function fillImageUrl(sheet, columnIndex){
