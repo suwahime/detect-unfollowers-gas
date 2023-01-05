@@ -25,7 +25,7 @@ const USER_FIELDS_NUM = 12;
 const DEBUG_API_AT_ONCE = false;
 
 function main() {
-  let spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   latestSheet = spreadsheet.getSheetByName('latest_followers');
 
   // Twitter API を叩いてフォロワーリスト取得する
@@ -51,7 +51,7 @@ function main() {
   let latestIds = latestIdValues.reduce((pre,current) => {pre.push(...current);return pre},[]);
   
   // unfollowした人を探す
-  let unfollows = [];
+  let unfollowUsers = [];
   var currentTime  = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm');
   // 配列のindexは、表のCLUMUN_INDEXから、LEFT_END_COLUMN_INDEXの分だけズレている
   let userIdIndex = USER_ID_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
@@ -59,18 +59,19 @@ function main() {
   let usernameIndex = USERNAME_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
   for(let i = 0; i < beforeFollowers.length; i++){
     if(!latestIds.includes(beforeFollowers[i][userIdIndex])){
-      let unfollowUser = [
-        currentTime,
-        null,
-        beforeFollowers[i][profileImageUrlIndex],
-        'https://twitter.com/' + beforeFollowers[i][usernameIndex]
-      ];
-      unfollows.push(unfollowUser);
+      let unfollowUsers = {
+        time      : currentTime,
+        image     : null,
+        imageUrl  : beforeFollowers[i][profileImageUrlIndex],
+        id        : beforeFollowers[i][userIdIndex],
+        url       : 'https://twitter.com/' + beforeFollowers[i][usernameIndex]
+      };
+      unfollowsJson.push(unfollowUsers);
     }
   }
 
   // unfollowした人を追記する
-  if(unfollows.length > 0){
+  if(unfollowUsers.length > 0){
     diff_sheet = spreadsheet.getSheetByName('diff');
     // truncateはせず、最後の行に追加する
     diff_sheet.getRange(diff_sheet.getLastRow() + 1, 1, unfollows.length, unfollows[0].length).setValues(unfollows);
@@ -97,7 +98,6 @@ function createFollowerArray(headerRow){
   const scriptProps = PropertiesService.getScriptProperties();
   const url = 'https://api.twitter.com/2/users/' + scriptProps.getProperty('MY_TWITTER_ID') + '/followers';
   const service = getService();
-
   if (service.hasAccess() === false) {
     const authorizationUrl = service.getAuthorizationUrl();
     Logger.log('Open the following URL and re-run the script: %s', authorizationUrl);
