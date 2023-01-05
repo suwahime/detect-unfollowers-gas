@@ -1,6 +1,3 @@
-// 取得したフォロワーデータの格納配列
-var followersArray = [];
-
 // シートのヘッダーに当たる部分の行のindex。この次の行からデータを挿入する
 const HEADER_ROW_INDEX = 0; // 0…1列目がヘッダー
 // データを挿入する左端にあたる列のindex
@@ -28,12 +25,12 @@ const USER_FIELDS_NUM = 12;
 const DEBUG_API_AT_ONCE = false;
 
 function main() {
-  let spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
+  const spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   latestSheet = spreadsheet.getSheetByName('latest_followers');
 
   // Twitter API を叩いてフォロワーリスト取得する
   let headerRow = latestSheet.getDataRange().getValues()[HEADER_ROW_INDEX];
-  createFollowerData(headerRow);
+  let followersArray = createFollowerArray(headerRow);
 
   // フォロワーリストをシートに保存する
   if(followersArray.length > 0){
@@ -54,7 +51,7 @@ function main() {
   let latestIds = latestIdValues.reduce((pre,current) => {pre.push(...current);return pre},[]);
   
   // unfollowした人を探す
-  let unfollows = [];
+  let unfollowUsers = [];
   var currentTime  = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy/MM/dd HH:mm');
   // 配列のindexは、表のCLUMUN_INDEXから、LEFT_END_COLUMN_INDEXの分だけズレている
   let userIdIndex = USER_ID_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
@@ -62,18 +59,19 @@ function main() {
   let usernameIndex = USERNAME_COLUMN_INDEX - LEFT_END_COLUMN_INDEX;
   for(let i = 0; i < beforeFollowers.length; i++){
     if(!latestIds.includes(beforeFollowers[i][userIdIndex])){
-      let unfollowUser = [
-        currentTime,
-        null,
-        beforeFollowers[i][profileImageUrlIndex],
-        'https://twitter.com/' + beforeFollowers[i][usernameIndex]
-      ];
-      unfollows.push(unfollowUser);
+      let unfollowUser = {
+        time      : currentTime,
+        image     : null,
+        imageUrl  : beforeFollowers[i][profileImageUrlIndex],
+        id        : beforeFollowers[i][userIdIndex],
+        url       : 'https://twitter.com/' + beforeFollowers[i][usernameIndex]
+      };
+      unfollowUsers.push(unfollowUser);
     }
   }
 
   // unfollowした人を追記する
-  if(unfollows.length > 0){
+  if(unfollowUsers.length > 0){
     diff_sheet = spreadsheet.getSheetByName('diff');
     // truncateはせず、最後の行に追加する
     diff_sheet.getRange(diff_sheet.getLastRow() + 1, 1, unfollows.length, unfollows[0].length).setValues(unfollows);
@@ -96,27 +94,17 @@ function truncateTable(sheet){
   contentRange.clearContent();
 }
 
-function pushFollowers(headerRow, jsonFollowers){
-  for (let row of jsonFollowers){
-    let rowArray = [];
-    for (let colName of headerRow){
-      rowArray.push(row[colName]);
-    }
-    followersArray.push(rowArray);
-  }
-}
-
-function createFollowerData(headerRow){
+function createFollowerArray(headerRow){
   const scriptProps = PropertiesService.getScriptProperties();
   const url = 'https://api.twitter.com/2/users/' + scriptProps.getProperty('MY_TWITTER_ID') + '/followers';
   const service = getService();
-
   if (service.hasAccess() === false) {
     const authorizationUrl = service.getAuthorizationUrl();
     Logger.log('Open the following URL and re-run the script: %s', authorizationUrl);
     return;
   }
 
+  let followersArray = [];
   let response, result, nextToken;
   do {
     let params = '?'+GET_PARAM_MAX_RESULTS+'&'+GET_PARAM_USER_FIELDS;
@@ -138,17 +126,25 @@ function createFollowerData(headerRow){
     let responseCode = response.getResponseCode();
     if(responseCode !== 200){
       Logger.log('Error. Response = ' + response);
-      followersArray = [];
-      break;
+      return [];
     }
 
-    pushFollowers(headerRow, result.data);
+    for (let row of result.data){
+      let rowArray = [];
+      for (let colName of headerRow){
+        rowArray.push(row[colName]);
+      }
+      followersArray.push(rowArray);
+    }
+
     if(DEBUG_API_AT_ONCE){
       break;
     }
     nextToken = result.meta.next_token;
 
   } while(nextToken !== undefined);
+
+  return followersArray;
 }
 
 function fillImageUrl(sheet, columnIndex){
